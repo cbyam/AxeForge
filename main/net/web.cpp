@@ -373,12 +373,20 @@ static esp_err_t status_get(httpd_req_t *req)
 
 static esp_err_t history_get(httpd_req_t *req)
 {
-    cJSON *a = cJSON_CreateArray();
+    // Same shape as /api/stats, so the dashboard draws both ranges with one function:
+    // {"step":30,"hashrate":[...],"temp":[...],"power":[...]}, oldest first.
+    cJSON *r = cJSON_CreateObject();
+    cJSON_AddNumberToObject(r, "step", 30);
+    cJSON *hr = cJSON_AddArrayToObject(r, "hashrate");
+    cJSON *t = cJSON_AddArrayToObject(r, "temp");
+    cJSON *p = cJSON_AddArrayToObject(r, "power");
     for (int i = 0; i < AF_HISTORY_LEN; i++) {
-        float h = g_state.history[(g_state.history_head + i) % AF_HISTORY_LEN];
-        cJSON_AddItemToArray(a, cJSON_CreateNumber((int) h));
+        int k = (g_state.history_head + i) % AF_HISTORY_LEN;
+        cJSON_AddItemToArray(hr, cJSON_CreateNumber((int) g_state.history[k]));
+        cJSON_AddItemToArray(t, cJSON_CreateNumber((int) (g_state.history_temp[k] * 10 + 0.5f) / 10.0));
+        cJSON_AddItemToArray(p, cJSON_CreateNumber((int) (g_state.history_power[k] * 10 + 0.5f) / 10.0));
     }
-    return send_json(req, a);
+    return send_json(req, r);
 }
 
 static esp_err_t settings_get(httpd_req_t *req)

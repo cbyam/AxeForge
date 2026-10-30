@@ -439,6 +439,8 @@ static void counter_task(void *)
         if (n % STATS_EVERY == STATS_EVERY - 1) stats::tick();
         if (++n % HISTORY_EVERY == 0) {
             g_state.history[g_state.history_head] = g_state.hashrate_ghs;
+            g_state.history_temp[g_state.history_head] = g_state.chip_temp_max;
+            g_state.history_power[g_state.history_head] = g_state.pin;
             g_state.history_head = (g_state.history_head + 1) % AF_HISTORY_LEN;
         }
         vTaskDelay(pdMS_TO_TICKS(COUNTER_PERIOD_MS - 1000));

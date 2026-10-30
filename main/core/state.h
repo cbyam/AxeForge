@@ -160,7 +160,9 @@ struct MinerState {
     float hashrate_ghs = 0;       // smoothed total
     float expected_ghs = 0;       // freq * cores
     float error_pct = 0;          // hw errors / total
-    float history[AF_HISTORY_LEN] = {};
+    float history[AF_HISTORY_LEN] = {};        // hashrate, GH/s
+    float history_temp[AF_HISTORY_LEN] = {};   // chip_temp_max, same cadence
+    float history_power[AF_HISTORY_LEN] = {};  // pin, W
     int history_head = 0;
 
     // Power / thermal

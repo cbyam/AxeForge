@@ -102,10 +102,20 @@ paths:
                     items: {type: object, properties: {ghs: {type: number}, errGhs: {type: number}, temp: {type: number}}}
   /api/history:
     get:
-      summary: Hashrate of the last hour (120 points, 30 s apart, GH/s, oldest first)
+      summary: The last hour, 120 points 30 s apart, oldest first (same shape as /api/stats)
       security: []
       responses:
-        '200': {description: Array of numbers, content: {application/json: {schema: {type: array, items: {type: number}}}}}
+        '200':
+          description: Series, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  step: {type: integer, description: Seconds between points (30)}
+                  hashrate: {type: array, items: {type: number}, description: GH/s}
+                  temp: {type: array, items: {type: number}, description: Hottest ASIC, °C}
+                  power: {type: array, items: {type: number}, description: Input power, W}
   /api/stats:
     get:
       summary: The last 24 hours, one point per 5 minutes, since boot

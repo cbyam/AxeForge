@@ -106,7 +106,7 @@ background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),line
 .wd .rs{position:absolute;right:2px;bottom:2px;width:14px;height:14px;cursor:nwse-resize;border-right:3px solid var(--cyan);border-bottom:3px solid var(--cyan);border-radius:0 0 6px 0;opacity:.7}
 .pal{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:330px;overflow-y:auto}.pal button{all:unset;cursor:pointer;padding:7px 8px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:12px;font-weight:600}
 .pal button:hover{border-color:var(--cyan)}
-.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px}.seg button{all:unset;cursor:pointer;padding:6px 14px;border-radius:7px;font-weight:700;font-size:13px;color:var(--dim)}.seg button.on{background:var(--cyan);color:#001318}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px}.seg button{all:unset;cursor:pointer;padding:6px 14px;border-radius:7px;font-weight:700;font-size:13px;color:var(--dim)}.seg button.on{background:var(--cyan);color:#001318}.seg.xs{border-radius:8px;padding:2px}.seg.xs button{padding:3px 9px;font-size:11px;border-radius:6px}
 /* logs */
 .console{background:var(--console);border:1px solid var(--line);border-radius:10px;height:420px;overflow:auto;padding:10px 12px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
 .console .lt{color:var(--dim)}.console .E{color:var(--red)}.console .W{color:var(--orange)}.console .I{color:#9fb0c6}.console .D{color:var(--dim)}
@@ -211,7 +211,10 @@ html[data-theme=paper] .pill{background:transparent}
   <text x="110" y="112" text-anchor="middle" class="v" id="hrv">--</text>
   <text x="110" y="138" text-anchor="middle" class="u" id="hru">TH/s</text>
   <text x="110" y="196" text-anchor="middle" class="s" id="hrs"></text></svg></div>
- <div class="card"><h3>Hashrate · last hour <span class="tag" id="eff">--</span></h3><svg class="chart" id="chart" preserveAspectRatio="none"></svg></div>
+ <div class="card"><h3><span id="ctitle">Hashrate · last hour</span><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+  <span class="seg xs" id="metseg"><button data-m="hashrate" class="on">Hashrate</button><button data-m="temp">Temp</button><button data-m="power">Power</button></span>
+  <span class="seg xs" id="rangeseg"><button data-r="hour" class="on">1 h</button><button data-r="day">24 h</button></span></span></h3>
+  <svg class="chart" id="chart" preserveAspectRatio="none"></svg><p class="note" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span id="cnote"></span><span class="tag" id="eff">--</span></p></div>
 </div>
 <div class="grid g4 mb">
  <div class="card"><i class="accent" style="background:var(--orange)"></i><h3>ASIC temp</h3><div class="big" id="ct">--</div><div class="sub" id="cts"></div><div class="bar"><i id="ctb" style="background:var(--orange)"></i></div></div>
@@ -230,9 +233,7 @@ html[data-theme=paper] .pill{background:transparent}
  <div class="card"><h3>Live share hash <span class="tag" id="lhd">--</span></h3><div class="hash" id="lh">waiting for the first share…</div>
   <div class="sub" style="margin-top:8px" id="lhn"></div></div>
 </div>
-<div class="grid g2 mb">
- <div class="card"><h3>Last 24 hours <span class="seg" id="dayseg"><button data-m="hashrate" class="on">Hashrate</button><button data-m="temp">Temp</button><button data-m="power">Power</button></span></h3>
-  <svg class="chart" id="daychart" preserveAspectRatio="none"></svg><p class="note" id="daynote" style="margin-top:6px"></p></div>
+<div class="mb">
  <div class="card"><h3>Best shares <span class="tag" id="scorecount">--</span></h3>
   <div style="overflow-x:auto"><table class="tbl" id="scores"></table></div>
   <div class="btns" style="margin-top:10px"><button class="btn alt sm" onclick="resetScores()">Clear list</button><span class="meta">Kept across reboots.</span></div></div>
@@ -535,18 +536,6 @@ async function tick(){try{S=await (await fetch('/api/status')).json()}catch(e){r
   $('navfoot').innerHTML=esc(S.ip||'')+` · <a href="${src}" target="_blank" rel="noopener" title="Source code">v${esc(S.version)}</a>`;}
  $('edsmall').style.display=S.screen=='tdisplay'?'':'none';
  if(cur=='pools')poolLive()}
-async function chart(){let h;try{h=await (await fetch('/api/history')).json()}catch(e){return}
- const c=$('chart'),W=c.clientWidth||600,H=c.clientHeight||150,pts=h.map((v,i)=>[i/(h.length-1)*W,v]).filter(p=>p[1]>0);
- if(pts.length<2){c.innerHTML=`<text x="${W/2}" y="${H/2}" style="fill:var(--axis)" text-anchor="middle" font-size="12">Collecting data — first point after 30 s</text>`;return}
- const mx=Math.max(...pts.map(p=>p[1]))*1.08,mn=Math.min(...pts.map(p=>p[1]))*.92,y=v=>H-6-(v-mn)/(mx-mn||1)*(H-16);
- const line=pts.map(p=>`${p[0].toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
- c.setAttribute('viewBox',`0 0 ${W} ${H}`);
- c.innerHTML=`<defs><linearGradient id="cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--chart)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--chart)" stop-opacity="0"/></linearGradient></defs>
- ${[.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${H*f}" y2="${H*f}" style="stroke:var(--track)"/>`).join('')}
- <polygon points="${pts[0][0]},${H} ${line} ${pts[pts.length-1][0]},${H}" fill="url(#cf)"/>
- <polyline points="${line}" fill="none" style="stroke:var(--chart)" stroke-width="2.2" stroke-linejoin="round" filter="url(#glow)"/>
- <text x="${W-4}" y="12" style="fill:var(--axis)" font-size="11" text-anchor="end">${hr(mx/1.08).join(' ')}</text>`}
-
 /* ---------------- generic settings forms */
 function fanText(S){const f=(S.fans||[]).filter(x=>x.connected);
  return f.length?f.length+(f.length>1?' fans · ':' fan · ')+f.map(x=>x.rpm).join(' / ')+' rpm':'no fan detected'}
@@ -701,20 +690,37 @@ async function pollLogs(){clearTimeout(logTimer);if(cur!='system')return;
   if(logLines.length&&logSince)logLines[logLines.length-1]+=parts.shift();logLines.push(...parts);if(logLines.length>2000)logLines=logLines.slice(-1500);renderLog()}logSince=r.next}catch(e){}}
  logTimer=setTimeout(pollLogs,1000)}
 
-/* ---------------- 24 h chart, best shares */
-let dayMetric='hashrate',DAY=null;
-document.querySelectorAll('#dayseg button').forEach(b=>b.onclick=()=>{dayMetric=b.dataset.m;document.querySelectorAll('#dayseg button').forEach(x=>x.classList.toggle('on',x==b));drawDay()});
-async function loadDay(){try{DAY=await (await fetch('/api/stats')).json()}catch(e){return}drawDay()}
-function drawDay(){const c=$('daychart');if(!DAY)return;const v=DAY[dayMetric]||[],W=c.clientWidth||600,H=c.clientHeight||150;
- const fmt=dayMetric=='hashrate'?x=>hr(x).join(' '):dayMetric=='temp'?x=>x.toFixed(1)+' °C':x=>x.toFixed(1)+' W';
- $('daynote').textContent=v.length?`${v.length} points, one per ${DAY.step/60} minutes · since boot, up to 24 h`:'';
- const pts=v.map((y,i)=>[v.length>1?i/(v.length-1)*W:W,y]).filter(p=>p[1]>0);
- if(pts.length<2){c.innerHTML=`<text x="${W/2}" y="${H/2}" style="fill:var(--axis)" text-anchor="middle" font-size="12">First point after 5 minutes of mining</text>`;return}
- const mx=Math.max(...pts.map(p=>p[1]))*1.05,mn=Math.min(...pts.map(p=>p[1]))*.95,y=q=>H-6-(q-mn)/(mx-mn||1)*(H-16);
- const line=pts.map(p=>`${p[0].toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');c.setAttribute('viewBox',`0 0 ${W} ${H}`);
- c.innerHTML=`<defs><linearGradient id="cf2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--chart)" stop-opacity=".3"/><stop offset="1" style="stop-color:var(--chart)" stop-opacity="0"/></linearGradient></defs>${[.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${H*f}" y2="${H*f}" style="stroke:var(--track)"/>`).join('')}
- <polygon points="${pts[0][0]},${H} ${line} ${pts[pts.length-1][0]},${H}" fill="url(#cf2)"/><polyline points="${line}" fill="none" style="stroke:var(--chart)" stroke-width="2" stroke-linejoin="round"/>
- <text x="${W-4}" y="12" style="fill:var(--axis)" font-size="11" text-anchor="end">max ${fmt(mx/1.05)}</text><text x="${W-4}" y="${H-4}" style="fill:var(--axis)" font-size="11" text-anchor="end">min ${fmt(mn/.95)}</text>`}
+/* ---------------- chart: hashrate / temp / power, last hour or 24 h; best shares */
+let cMetric='hashrate',cRange='hour',HOUR=null,DAY=null,HP=null;  // HP: hover points [x, y, value, seconds ago]
+const cSeg=(id,attr,set)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{set(b.dataset[attr]);document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x==b));drawChart()});
+cSeg('metseg','m',v=>cMetric=v);cSeg('rangeseg','r',v=>cRange=v);
+async function chart(){try{HOUR=await (await fetch('/api/history')).json()}catch(e){return}if(cRange=='hour')drawChart()}
+async function loadDay(){try{DAY=await (await fetch('/api/stats')).json()}catch(e){return}if(cRange=='day')drawChart()}
+const cFmt=x=>cMetric=='hashrate'?hr(x).join(' '):cMetric=='temp'?x.toFixed(1)+' °C':x.toFixed(1)+' W';
+const cAgo=s=>s<30?'now':s<3600?`${Math.round(s/60)} min ago`:`${Math.floor(s/3600)} h ${Math.round(s%3600/60)} min ago`;
+function drawChart(){const c=$('chart'),D=cRange=='hour'?HOUR:DAY,v=D&&D[cMetric]||[],step=D?D.step:30,W=c.clientWidth||600,H=c.clientHeight||150;
+ $('ctitle').textContent=`${{hashrate:'Hashrate',temp:'ASIC temp',power:'Power'}[cMetric]} · last ${cRange=='hour'?'hour':'24 hours'}`;
+ $('eff').style.display=cMetric=='hashrate'?'':'none';
+ const pts=v.map((y,i)=>[v.length>1?i/(v.length-1)*W:W,y,i]).filter(p=>p[1]>0);
+ $('cnote').textContent=cRange=='hour'?`${pts.length} points, one every 30 s`:pts.length?`${pts.length} points, one per ${step/60} minutes · since boot, up to 24 h`:'';
+ if(pts.length<2){HP=null;c.innerHTML=`<text x="${W/2}" y="${H/2}" style="fill:var(--axis)" text-anchor="middle" font-size="12">${cRange=='hour'?'Collecting data — first point after 30 s':'First point after 5 minutes of mining'}</text>`;return}
+ const pad=cRange=='hour'?.08:.05,mx=Math.max(...pts.map(p=>p[1]))*(1+pad),mn=Math.min(...pts.map(p=>p[1]))*(1-pad),y=q=>H-6-(q-mn)/(mx-mn||1)*(H-16);
+ const line=pts.map(p=>`${p[0].toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
+ HP=pts.map(p=>[p[0],y(p[1]),p[1],(v.length-1-p[2])*step]);
+ c.setAttribute('viewBox',`0 0 ${W} ${H}`);
+ c.innerHTML=`<defs><linearGradient id="cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--chart)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--chart)" stop-opacity="0"/></linearGradient></defs>
+ ${[.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${H*f}" y2="${H*f}" style="stroke:var(--track)"/>`).join('')}
+ <polygon points="${pts[0][0]},${H} ${line} ${pts[pts.length-1][0]},${H}" fill="url(#cf)"/>
+ <polyline points="${line}" fill="none" style="stroke:var(--chart)" stroke-width="1.4" stroke-linejoin="round" filter="url(#glow)"/>
+ <text x="${W-4}" y="12" style="fill:var(--axis)" font-size="11" text-anchor="end">max ${cFmt(mx/(1+pad))}</text><text x="${W-4}" y="${H-4}" style="fill:var(--axis)" font-size="11" text-anchor="end">min ${cFmt(mn/(1-pad))}</text>
+ <g id="chh" style="display:none"><line id="chhl" y1="0" y2="${H}" style="stroke:var(--axis)" stroke-dasharray="3 3"/><circle id="chhd" r="3.5" style="fill:var(--chart);stroke:var(--panel)" stroke-width="1.5"/>
+ <text id="chht" style="fill:var(--text)" font-size="11" font-weight="700"></text></g>`}
+$('chart').addEventListener('pointermove',e=>{if(!HP)return;const c=$('chart'),r=c.getBoundingClientRect(),W=c.viewBox.baseVal.width||r.width,x=(e.clientX-r.left)/r.width*W;
+ let p=HP[0];for(const q of HP)if(Math.abs(q[0]-x)<Math.abs(p[0]-x))p=q;
+ const t=$('chht'),right=p[0]>W/2;
+ $('chh').style.display='';$('chhl').setAttribute('x1',p[0]);$('chhl').setAttribute('x2',p[0]);$('chhd').setAttribute('cx',p[0]);$('chhd').setAttribute('cy',p[1]);
+ t.textContent=`${cFmt(p[2])} · ${cAgo(p[3])}`;t.setAttribute('x',right?p[0]-8:p[0]+8);t.setAttribute('y',Math.max(26,p[1]-10));t.setAttribute('text-anchor',right?'end':'start')});
+$('chart').addEventListener('pointerleave',()=>{const g=$('chh');if(g)g.style.display='none'});
 // "14:05" today, "27 Oct 14:05" before
 const when=t=>{const d=new Date(t*1000),hm=d.toTimeString().slice(0,5);return d.toDateString()==new Date().toDateString()?hm:d.getDate()+' '+d.toLocaleString('en',{month:'short'})+' '+hm};
 async function loadScores(){let a;try{a=await (await fetch('/api/scoreboard')).json()}catch(e){return}
